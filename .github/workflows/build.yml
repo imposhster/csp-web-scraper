@@ -1,0 +1,72 @@
+name: Build CSP docs
+
+on:
+  schedule:
+    # Weekly on Mondays at 06:00 UTC.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-csp-docs
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Restore state cache
+        uses: actions/cache@v4
+        with:
+          path: state
+          key: csp-scraper-state-v1
+
+      - name: Restore previous output from latest release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p output
+          if gh release download latest --pattern csp-docs.zip --dir /tmp --clobber 2>/dev/null; then
+            echo "Restoring pages/ from prior release"
+            unzip -o /tmp/csp-docs.zip -d /tmp/prior > /dev/null
+            if [ -d /tmp/prior/pages ]; then
+              cp /tmp/prior/pages/*.md output/ 2>/dev/null || true
+            fi
+          else
+            echo "No prior release — starting cold."
+          fi
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Summarize
+        id: summary
+        run: |
+          node -e '
+            const m = JSON.parse(require("fs").readFileSync("state/manifest.json", "utf8"));
+            const c = m.counts;
+            const line = `Built ${new Date().toISOString().slice(0,10)}. ${c.total} pages: ${c.updated} updated, ${c.notModified} unchanged, ${c.missing} missing, ${c.errors} errors.`;
+            require("fs").appendFileSync(process.env.GITHUB_OUTPUT, `notes=${line}\n`);
+            console.log(line);
+          '
+
+      - name: Replace "latest" release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete latest --cleanup-tag --yes 2>/dev/null || true
+          gh release create latest dist/csp-docs.zip \
+            --title "Latest CSP Docs" \
+            --notes "${{ steps.summary.outputs.notes }}"
