@@ -1,0 +1,19 @@
+{
+  "name": "csp-web-scraper",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Scrapes Microsoft Learn CSP documentation (non-Policy) as markdown and publishes a zip artifact.",
+  "type": "module",
+  "scripts": {
+    "fetch:toc": "node scripts/fetch-toc.mjs",
+    "fetch:pages": "node scripts/fetch-pages.mjs",
+    "pack": "node scripts/pack.mjs",
+    "build": "node scripts/build.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "adm-zip": "^0.5.16"
+  }
+}
