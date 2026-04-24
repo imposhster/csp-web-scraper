@@ -2,6 +2,8 @@
 
 Scrapes Microsoft Learn CSP documentation and mirrors the monthly Policy DDF zip. Publishes two artifacts to a stable GitHub release URL for downstream consumers (e.g. `cpt-csp-ui`).
 
+> **Looking for developer handoff docs?** See [`docs/`](docs/README.md) — architecture, data sources, parsing rules, artifact schemas, CI pipeline, Java/Kotlin port guide, and design decisions.
+
 ## Artifacts
 
 Every build produces two zips attached to the `latest` GitHub release:
