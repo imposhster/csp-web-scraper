@@ -12,6 +12,13 @@ export const slugsPath = path.join(stateDir, 'slugs.json')
 export const manifestPath = path.join(stateDir, 'manifest.json')
 export const zipPath = path.join(distDir, 'csp-docs.zip')
 
+export const policyDdfDir = path.join(stateDir, 'policy-ddf')
+export const policyDdfExtractedDir = path.join(policyDdfDir, 'extracted')
+export const policyDdfStatePath = path.join(policyDdfDir, 'state.json')
+export const policyDdfZipPath = path.join(distDir, 'policy-ddf.zip')
+
+export const configServiceProviderDdfSlug = 'configuration-service-provider-ddf'
+
 export const mdmBaseUrl =
   process.env.CSP_MDM_BASE_URL ||
   'https://learn.microsoft.com/en-us/windows/client-management/mdm'

@@ -17,6 +17,7 @@ function run(script) {
 if (!skipFetch) {
   run('fetch-toc.mjs')
   run('fetch-pages.mjs')
+  run('fetch-policy-ddf.mjs')
 } else {
   console.log('[build] CSP_SKIP_FETCH=1 — skipping fetch steps, packing existing output/')
 }
