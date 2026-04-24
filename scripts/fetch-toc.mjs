@@ -3,11 +3,15 @@ import path from 'node:path'
 import { requestText } from './http.mjs'
 import { tocUrl, slugsPath, stateDir } from './paths.mjs'
 
-const POLICY_SLUG = 'policy-configuration-service-provider'
+// The Policy overview page describes the Policy CSP as a whole — we keep that
+// for downstream context. Everything else in the Policy subtree (policy-csp-*,
+// policy-ddf-*) is covered by the DDF XML published as a separate artifact and
+// would bloat this one unnecessarily.
+const POLICY_ALLOWLIST = new Set(['policy-configuration-service-provider'])
 
 function isExcluded(href) {
+  if (POLICY_ALLOWLIST.has(href)) return false
   if (href.startsWith('policy-')) return true
-  if (href === POLICY_SLUG) return true
   return false
 }
 
@@ -73,10 +77,14 @@ async function main() {
   }
   fs.writeFileSync(slugsPath, JSON.stringify(payload, null, 2))
 
-  const policyKept = sorted.filter((s) => s.startsWith('policy-'))
-  console.log(`[toc] kept ${sorted.length} slugs; wrote ${path.relative(process.cwd(), slugsPath)}`)
-  if (policyKept.length) {
-    throw new Error(`Filter bug: ${policyKept.length} policy- slugs leaked through`)
+  const policyLeaks = sorted.filter(
+    (s) => s.startsWith('policy-') && !POLICY_ALLOWLIST.has(s),
+  )
+  console.log(
+    `[toc] kept ${sorted.length} slugs; wrote ${path.relative(process.cwd(), slugsPath)}`,
+  )
+  if (policyLeaks.length) {
+    throw new Error(`Filter bug: ${policyLeaks.length} unexpected policy- slugs leaked through`)
   }
 }
 

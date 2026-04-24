@@ -34,15 +34,24 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mkdir -p output
+          mkdir -p output state/policy-ddf/extracted
           if gh release download latest --pattern csp-docs.zip --dir /tmp --clobber 2>/dev/null; then
-            echo "Restoring pages/ from prior release"
-            unzip -o /tmp/csp-docs.zip -d /tmp/prior > /dev/null
-            if [ -d /tmp/prior/pages ]; then
-              cp /tmp/prior/pages/*.md output/ 2>/dev/null || true
+            echo "Restoring pages/ from prior csp-docs.zip"
+            unzip -o /tmp/csp-docs.zip -d /tmp/prior-csp > /dev/null
+            if [ -d /tmp/prior-csp/pages ]; then
+              cp /tmp/prior-csp/pages/*.md output/ 2>/dev/null || true
             fi
           else
-            echo "No prior release — starting cold."
+            echo "No prior csp-docs.zip — starting cold."
+          fi
+          if gh release download latest --pattern policy-ddf.zip --dir /tmp --clobber 2>/dev/null; then
+            echo "Restoring extracted XML from prior policy-ddf.zip"
+            unzip -o /tmp/policy-ddf.zip -d /tmp/prior-ddf > /dev/null
+            if [ -d /tmp/prior-ddf/extracted ]; then
+              cp /tmp/prior-ddf/extracted/*.xml state/policy-ddf/extracted/ 2>/dev/null || true
+            fi
+          else
+            echo "No prior policy-ddf.zip — starting cold."
           fi
 
       - name: Install deps
@@ -55,10 +64,18 @@ jobs:
         id: summary
         run: |
           node -e '
-            const m = JSON.parse(require("fs").readFileSync("state/manifest.json", "utf8"));
+            const fs = require("fs");
+            const m = JSON.parse(fs.readFileSync("state/manifest.json", "utf8"));
             const c = m.counts;
-            const line = `Built ${new Date().toISOString().slice(0,10)}. ${c.total} pages: ${c.updated} updated, ${c.notModified} unchanged, ${c.missing} missing, ${c.errors} errors.`;
-            require("fs").appendFileSync(process.env.GITHUB_OUTPUT, `notes=${line}\n`);
+            let ddf = "no policy-ddf artifact";
+            try {
+              const s = JSON.parse(fs.readFileSync("state/policy-ddf/state.json", "utf8"));
+              const fname = (s.discoveredUrl || "").split("/").pop();
+              const mb = s.sourceBytes ? (s.sourceBytes/1024/1024).toFixed(2) : "?";
+              ddf = `policy-ddf: ${s.xmlCount ?? "?"} XML files (source ${fname}, ${mb} MB)`;
+            } catch {}
+            const line = `Built ${new Date().toISOString().slice(0,10)}. csp-docs: ${c.total} pages (${c.updated} updated, ${c.notModified} unchanged, ${c.missing} missing, ${c.errors} errors). ${ddf}.`;
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `notes=${line}\n`);
             console.log(line);
           '
 
@@ -67,6 +84,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release delete latest --cleanup-tag --yes 2>/dev/null || true
-          gh release create latest dist/csp-docs.zip \
+          ASSETS="dist/csp-docs.zip"
+          if [ -f dist/policy-ddf.zip ]; then
+            ASSETS="$ASSETS dist/policy-ddf.zip"
+          fi
+          gh release create latest $ASSETS \
             --title "Latest CSP Docs" \
             --notes "${{ steps.summary.outputs.notes }}"
